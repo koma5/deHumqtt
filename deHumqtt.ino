@@ -18,6 +18,18 @@ IPAddress ip(172, 16, 0, 147);
 IPAddress server(172, 16, 0, 70);
 
 # define HUM_PIN 7
+# define FULL_LED 9
+# define ON_LED 8
+
+# define TANK_SWITCH 3
+# define FULL_SWITCH 2
+
+unsigned long lastTankCheck = 0;
+unsigned long lastTankFullPub = 0;
+unsigned long lastTankInsertedPub = 0;
+
+bool tankFull = false;
+bool tankInserted = false;
 
 void callback(char* topic, byte* payload, unsigned int length)
 {
@@ -65,7 +77,12 @@ void setup()
   }  
   
   Ethernet.begin(mac, ip);
+  
   pinMode(HUM_PIN, OUTPUT);
+  pinMode(FULL_LED, OUTPUT);
+  pinMode(ON_LED, OUTPUT);
+  pinMode(TANK_SWITCH, INPUT);
+  pinMode(FULL_SWITCH, INPUT);
 }
 
 void loop()
@@ -74,6 +91,35 @@ void loop()
   if(client.connected())
   {
       client.loop();
+
+      if(millis() < lastTankCheck || millis() - lastTankCheck >= 1000) {
+        
+        tankFull = digitalRead(FULL_SWITCH);
+        tankInserted = !digitalRead(TANK_SWITCH);
+
+        if (tankFull) {
+          digitalWrite(FULL_LED, HIGH);
+          off(HUM_PIN);
+        
+          if (millis() - lastTankFullPub >= 120000) {
+            client.publish("vw/dehum/state", "tank full");
+            lastTankFullPub = millis();
+          }
+          
+        }
+        else {
+          digitalWrite(FULL_LED, LOW);
+        }
+
+        if (tankInserted && millis() - lastTankInsertedPub >= 120000) {
+          client.publish("vw/dehum/state", "tank not inserted");
+          //off(HUM_PIN);
+          lastTankInsertedPub = millis();
+        }
+        
+        lastTankCheck = millis();
+      }
+
   }
   else
   {
@@ -126,6 +172,7 @@ void changeState(boolean state, int pin, boolean publishState)
 {
   
   digitalWrite(pin, state);
+  digitalWrite(ON_LED, state);
   
   if(publishState)
   {
