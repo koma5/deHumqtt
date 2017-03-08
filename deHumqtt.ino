@@ -14,7 +14,7 @@ struct config_led
 char stringBuf[25];
 
 byte mac[]    = {  0x90, 0xA2, 0xDA, 0x00, 0x5B, 0x26 };
-IPAddress ip(172, 16, 0, 147);
+IPAddress ip(172, 16, 0, 159);
 IPAddress server(172, 16, 0, 70);
 
 # define HUM_PIN 7
@@ -88,41 +88,57 @@ void setup()
 void loop()
 {
   
+  if(millis() < lastTankCheck || millis() - lastTankCheck >= 1000) {
+
+    tankFull = digitalRead(FULL_SWITCH);
+    tankInserted = !digitalRead(TANK_SWITCH);
+
+    if (tankFull) {
+      digitalWrite(FULL_LED, HIGH);
+      off(HUM_PIN);
+
+      if (millis() - lastTankFullPub >= 120000) {
+        client.publish("vw/dehum/state", "tank full");
+        lastTankFullPub = millis();
+      }
+
+    }
+    else {
+      digitalWrite(FULL_LED, LOW);
+    }
+
+    if (tankInserted && millis() - lastTankInsertedPub >= 120000) {
+      client.publish("vw/dehum/state", "tank not inserted");
+      //off(HUM_PIN);
+      lastTankInsertedPub = millis();
+    }
+
+    lastTankCheck = millis();
+  }
+
+
+
   if(client.connected())
   {
       client.loop();
-
-      if(millis() < lastTankCheck || millis() - lastTankCheck >= 1000) {
-        
-        tankFull = digitalRead(FULL_SWITCH);
-        tankInserted = !digitalRead(TANK_SWITCH);
-
-        if (tankFull) {
-          digitalWrite(FULL_LED, HIGH);
-          off(HUM_PIN);
-        
-          if (millis() - lastTankFullPub >= 120000) {
-            client.publish("vw/dehum/state", "tank full");
-            lastTankFullPub = millis();
-          }
-          
-        }
-        else {
-          digitalWrite(FULL_LED, LOW);
-        }
-
-        if (tankInserted && millis() - lastTankInsertedPub >= 120000) {
-          client.publish("vw/dehum/state", "tank not inserted");
-          //off(HUM_PIN);
-          lastTankInsertedPub = millis();
-        }
-        
-        lastTankCheck = millis();
-      }
-
   }
   else
   {
+    digitalWrite(ON_LED, HIGH);
+    delay(100);
+    digitalWrite(ON_LED, LOW);
+    delay(100);
+    digitalWrite(ON_LED, HIGH);
+    delay(100);
+    digitalWrite(ON_LED, LOW);
+    delay(100);
+    digitalWrite(ON_LED, HIGH);
+    delay(100);
+    digitalWrite(ON_LED, LOW);
+    delay(100);
+
+    digitalWrite(ON_LED, digitalRead(HUM_PIN));
+
     client.connect("deHumqtt");
     delay(5000);
     client.subscribe("vw/dehum");
