@@ -14,8 +14,8 @@ struct config_led
 char stringBuf[25];
 
 byte mac[]    = {  0x90, 0xA2, 0xDA, 0x00, 0x5B, 0x26 };
-IPAddress ip(172, 16, 0, 159);
-IPAddress server(172, 16, 0, 70);
+IPAddress ip(172, 16, 42, 159);
+IPAddress server(172, 16, 42, 70);
 
 # define HUM_PIN 7
 # define FULL_LED 9
